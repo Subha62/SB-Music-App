@@ -1,5 +1,6 @@
 # SB Music
- ## Host link : http://localhost:5173/
+ ## Host link : http://localhost:5173/ 
+ # After click the host link  if the page is not available then quick reload your browser one or more times
 
 # SB Music is a Progressive Web App (PWA) music app made with Javascript using React.jsand YouTube Api that allows user to discover and listen to new music from around the world. The website features a clean and modern design, a user-friendly interface, and a powerful search feature of youtube.
 ## Features:
