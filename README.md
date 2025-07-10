@@ -31,10 +31,6 @@ React router dom
 React loading skeleton
 React icons
 
-## Backend:
-Node js
-Express js
-Ytdl-core package
 # Note:
 Now this project is migrated from CRA to Vite + React app
 ## Getting Started with Vite React App :
