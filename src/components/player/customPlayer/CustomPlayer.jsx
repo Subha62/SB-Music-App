@@ -1,116 +1,94 @@
-import React, { useEffect, useState } from "react";
-import "./CustomPlayer.css";
+import React from "react";
 import ReactPlayer from "react-player";
-import Skeleton, { SkeletonTheme } from "react-loading-skeleton";
-import { BsFullscreen } from "react-icons/bs";
 
 const CustomPlayer = ({
   songId,
   playerRef,
   songsInfo,
-  isLoading,
-  activeToggle,
+  setAudioLoading,
   playerState,
   setPlayerState,
-  setAudioLoading,
-  autoPlay,
   handleNext,
+  activeToggle,
+  isLoading,
+  autoPlay,
   setAlertMessage,
+  setIsReady,
 }) => {
-  const handleFullscreenToggle = () => {
-    if (playerRef.current) {
-      if (!document.fullscreenElement) {
-        playerRef.current.wrapper.requestFullscreen().catch((err) => {
-          console.error(
-            `Error attempting to enable fullscreen mode: ${err.message} (${err.name})`
-          );
-          setAlertMessage("Unable to change fullscreen mode");
-        });
-      } else {
-        document.exitFullscreen().catch((err) => {
-          console.error(
-            `Error attempting to exit fullscreen mode: ${err.message} (${err.name})`
-          );
-          setAlertMessage("Unable to change exit mode");
-        });
-      }
-    }
+  // ✅ When player is ready
+  const handleReady = () => {
+    setIsReady(true);
+    setAudioLoading(false);
+  };
+
+  // ✅ When error occurs
+  const handleError = () => {
+    setAlertMessage("Error loading media");
+    setAudioLoading(false);
   };
 
   return (
-    <div
-      className={`player-song-image-wrapper ${
-        !songsInfo[0]?.snippet.thumbnails?.maxres ? "small-hq-image" : ""
-      }`}
-    >
-      {!isLoading && songsInfo.length ? (
-        <img
-          src={
-            songsInfo[0]?.snippet.thumbnails?.maxres
-              ? `https://i.ytimg.com/vi/${songId}/maxresdefault.jpg`
-              : `https://i.ytimg.com/vi/${songId}/hqdefault.jpg`
+    <div className="custom-player-wrapper">
+      {activeToggle === "video" ? (
+        // 🎬 VIDEO MODE
+        <ReactPlayer
+          ref={playerRef}
+          url={`https://www.youtube.com/watch?v=${songId}`}
+          playing={playerState.playing}
+          volume={playerState.volume}
+          muted={playerState.muted}
+          onReady={handleReady}
+          onError={handleError}
+          onProgress={(state) =>
+            setPlayerState((prev) => ({ ...prev, ...state }))
           }
-          alt="song-poster"
-          className="player-song-image"
+          onEnded={handleNext}
+          width="100%"
+          height="100%"
         />
       ) : (
-        <SkeletonTheme
-          baseColor="#747070"
-          highlightColor="#615e5e"
-          duration={2}
-        >
-          <Skeleton height={"200px"} />
-        </SkeletonTheme>
+        // 🎧 AUDIO MODE
+        <>
+          {/* Hidden audio player */}
+          <ReactPlayer
+            ref={playerRef}
+            url={
+              playerState.url ||
+              `https://www.youtube.com/watch?v=${songId}`
+            }
+            playing={playerState.playing}
+            volume={playerState.volume}
+            muted={playerState.muted}
+            onReady={handleReady}
+            onError={handleError}
+            onProgress={(state) =>
+              setPlayerState((prev) => ({ ...prev, ...state }))
+            }
+            onEnded={handleNext}
+            width="0px"
+            height="0px"
+          />
+
+          {/* Thumbnail UI (Audio mode) */}
+          <div
+            style={{
+              width: "100%",
+              borderRadius: "12px",
+              overflow: "hidden",
+            }}
+          >
+            <img
+              src={`https://i.ytimg.com/vi/${songId}/hqdefault.jpg`}
+              alt="audio-thumbnail"
+              style={{
+                width: "100%",
+                objectFit: "cover",
+                borderRadius: "12px",
+              }}
+            />
+          </div>
+        </>
       )}
-      <ReactPlayer
-        url={
-          activeToggle === "audio"
-            ? playerState.url
-            : `https://www.youtube.com/watch?v=${songId}`
-        }
-        ref={playerRef}
-        volume={playerState.volume}
-        onReady={() => setAudioLoading(false)}
-        playing={playerState.playing}
-        onPlay={() => setPlayerState({ ...playerState, playing: true })}
-        onPause={() => setPlayerState({ ...playerState, playing: false })}
-        width={"100%"}
-        height={"100%"}
-        style={{
-          position: "absolute",
-          top: "0px",
-          transform: "scale(1.01)",
-        }}
-        onProgress={(state) =>
-          setPlayerState({
-            ...playerState,
-            played: state.played,
-            loaded: state.loaded,
-          })
-        }
-        onEnded={() => (autoPlay ? handleNext() : null)}
-        onError={(e) => {
-          // Check the error code
-          console.log(e.target.error);
-          if (e.target.error.code === 4 || !e.target.error.message.length) {
-            // Handle the 403 error
-            setPlayerState({ ...playerState, url: null });
-            activeToggle === "audio"
-              ? setAlertMessage("Try reloading or switching to video.")
-              : null;
-          }
-        }}
-      />
-      {activeToggle === "video" ? (
-        <button
-          type="button"
-          title="fullScreen"
-          className="fullscreen-btn absolute-center"
-          onClick={handleFullscreenToggle}
-        >
-          <BsFullscreen size={18} />
-        </button>
-      ) : null}
     </div>
   );
 };
