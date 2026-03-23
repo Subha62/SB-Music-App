@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import "./PlayerControls.css";
 import {
@@ -18,84 +19,86 @@ const PlayerControls = ({
   setPlayerState,
   autoPlay,
   setAutoPlay,
-  mapVideoId,
-  currentIndex,
 }) => {
   const [seekTime, setSeekTime] = useState(0);
   const [bufferedAmount, setBufferedAmount] = useState(0);
 
-  const duration = playerRef?.current?.getDuration();
+  const duration = playerRef?.current?.getDuration?.() || 0;
+  const currentTime = (playerState?.played ?? 0) * duration;
 
-  const currentTime = playerState?.played * playerRef.current?.getDuration();
-  localStorage.setItem("localVolume", playerState.volume);
-
+  // Seek handling
   useEffect(() => {
-    playerRef.current?.seekTo(seekTime);
-    // eslint-disable-next-line
-  }, [seekTime]);
+    if (duration > 0 && seekTime >= 0) {
+      const fraction = seekTime / duration;
+      playerRef?.current?.seekTo(fraction, "fraction");
+    }
+  }, [seekTime, duration, playerRef]);
 
-  // get audio buffered end amount
+  // Buffer progress
   useEffect(() => {
-    const bufferedAmount = Math.floor(playerState.loaded * 100);
-    setBufferedAmount(bufferedAmount);
-  }, [playerState.loaded]);
+    setBufferedAmount(Math.floor((playerState?.loaded ?? 0) * 100));
+  }, [playerState?.loaded]);
+
+  // Save volume
+  useEffect(() => {
+    localStorage.setItem("localVolume", playerState.volume);
+  }, [playerState.volume]);
+
+  const formatTime = (seconds) => {
+    if (!seconds || seconds <= 0) return "00:00";
+    return seconds > 3600
+      ? new Date(seconds * 1000).toISOString().substr(11, 8)
+      : new Date(seconds * 1000).toISOString().substr(14, 5);
+  };
 
   return (
     <div className="player-controls-container">
+      {/* Progress Bar */}
       <div className="progress-duration-wrapper">
         <div className="player-progress-bar-wrapper cur-pointer">
           <input
             type="range"
-            title="seekbar"
-            step="any"
             className="seekbar"
-            value={currentTime || 0}
+            step="any"
             min={0}
-            max={duration || 0}
-            onInput={(e) => setSeekTime(e.target.value)}
+            max={duration}
+            value={currentTime}
+            onInput={(e) => setSeekTime(Number(e.target.value))}
             style={{
               "--buffered-width": `${bufferedAmount}%`,
             }}
           />
         </div>
+
         <div className="player-durations-wrapper">
-          <p>
-            {!currentTime
-              ? "00:00"
-              : currentTime > 3600
-              ? new Date(currentTime * 1000).toISOString().substring(11, 19)
-              : new Date(currentTime * 1000).toISOString().substring(14, 19)}
-          </p>
-          {!duration ? (
-            "00:00"
-          ) : (
-            <p>
-              {duration > 3600
-                ? new Date(duration * 1000).toISOString().substring(11, 19)
-                : new Date(duration * 1000).toISOString().substring(14, 19)}
-            </p>
-          )}
+          <p>{formatTime(currentTime)}</p>
+          <p>{formatTime(duration)}</p>
         </div>
       </div>
 
+      {/* Controls */}
       <div className="player-controls-wrapper absolute-center">
+        {/* ✅ PREVIOUS */}
         <button
           type="button"
-          title="prev"
+          title="Previous"
           className="audio-prev-wrapper next-prev-icons cur-pointer"
-          style={{ opacity: currentIndex <= 0 && "0.5" }}
           onClick={handlePrev}
         >
           <BsFillSkipStartFill style={{ width: "100%", height: "100%" }} />
         </button>
 
+        {/* PLAY / PAUSE */}
         <div className="audio-play-pause-wrapper">
           <button
             type="button"
-            title="play/pause"
-            className="audio-play-pause  cur-pointer"
+            title={playerState.playing ? "Pause" : "Play"}
+            className="audio-play-pause cur-pointer"
             onClick={() =>
-              setPlayerState({ ...playerState, playing: !playerState.playing })
+              setPlayerState((prev) => ({
+                ...prev,
+                playing: !prev.playing,
+              }))
             }
           >
             {!playerState.playing || playerState.played === 1 ? (
@@ -103,15 +106,17 @@ const PlayerControls = ({
                 style={{
                   width: "100%",
                   height: "100%",
-                  opacity: audioLoading && "0.8",
+                  opacity: audioLoading ? 0.8 : 1,
                 }}
               />
             ) : (
-              <BsPauseCircleFill style={{ width: "100%", height: "100%" }} />
+              <BsPauseCircleFill
+                style={{ width: "100%", height: "100%" }}
+              />
             )}
           </button>
 
-          {audioLoading ? (
+          {audioLoading && (
             <div className="loading-spin">
               <svg style={{ width: "100%", height: "100%" }}>
                 <circle
@@ -123,54 +128,56 @@ const PlayerControls = ({
                 ></circle>
               </svg>
             </div>
-          ) : null}
+          )}
         </div>
 
+        {/* ✅ NEXT */}
         <button
           type="button"
-          title="next"
+          title="Next"
           className="audio-next-wrapper next-prev-icons cur-pointer"
-          style={{ opacity: currentIndex >= mapVideoId.length - 1 && "0.5" }}
           onClick={handleNext}
         >
           <BsFillSkipEndFill style={{ width: "100%", height: "100%" }} />
         </button>
       </div>
 
+      {/* Volume + Autoplay */}
       <div className="volume-autoplay-wrapper">
         <div className="audio-volume-wrapper">
           <button
             type="button"
-            title="mute/unmute"
+            title={playerState.volume > 0 ? "Mute" : "Unmute"}
             className="audio-volume-btn"
             onClick={() =>
-              setPlayerState({
-                ...playerState,
-                volume: playerState.volume > 0 ? 0 : 0.5,
-              })
+              setPlayerState((prev) => ({
+                ...prev,
+                volume: prev.volume > 0 ? 0 : 0.5,
+              }))
             }
           >
             {playerState.volume > 0 ? (
               <BsFillVolumeUpFill style={{ width: "100%", height: "100%" }} />
             ) : (
-              <BsFillVolumeMuteFill style={{ width: "100%", height: "100%" }} />
+              <BsFillVolumeMuteFill
+                style={{ width: "100%", height: "100%" }}
+              />
             )}
           </button>
 
           <div className="audio-volume">
             <input
               type="range"
-              title="volume"
               className="volume-input cur-pointer"
               min={0.0}
               max={1.0}
               step={0.01}
               value={playerState.volume}
               onChange={(e) =>
-                setPlayerState({
-                  ...playerState,
+                setPlayerState((prev) => ({
+                  ...prev,
                   volume: e.target.valueAsNumber,
-                })
+                }))
               }
             />
           </div>
@@ -181,13 +188,10 @@ const PlayerControls = ({
           <label className="audio-autoplay">
             <input
               type="checkbox"
-              title="autoplay"
-              aria-label="autoplay"
-              placeholder="autoplay"
               checked={autoPlay}
-              onChange={() => setAutoPlay(!autoPlay)}
+              onChange={() => setAutoPlay((prev) => !prev)}
             />
-            <span className="autoplay-slider" title="autoplay">
+            <span className="autoplay-slider">
               <span className="autoplay-icons">
                 {autoPlay ? (
                   <BsPlayCircleFill style={{ width: "100%", height: "100%" }} />
